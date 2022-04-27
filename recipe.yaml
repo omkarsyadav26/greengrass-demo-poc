@@ -1,0 +1,64 @@
+---
+RecipeFormatVersion: '2020-01-25'
+ComponentName: com.example.HelloWorld
+ComponentVersion: 1.3.0
+ComponentType: aws.greengrass.generic
+ComponentDescription: This Component version will fetch data from sensor, post it to kinesis, if fails will write the data to local db and then will try to upload the data in next iteration
+ComponentPublisher: GS Lab
+ComponentConfiguration:
+  DefaultConfiguration:
+    accessControl:
+      aws.greengrass.ShadowManager:
+        'com.example.HelloWorld:shadow:1':
+          policyDescription: 'Allows access to shadows'
+          operations:
+            - 'aws.greengrass#GetThingShadow'
+            - 'aws.greengrass#UpdateThingShadow'
+            - 'aws.greengrass#DeleteThingShadow'
+          resources:
+            - $aws/things/gpoc/shadow
+            - $aws/things/gpoc/shadow/name/ACStatus
+        'com.example.HelloWorld:shadow:2':
+          policyDescription: 'Allows access to things with shadows'
+          operations:
+            - 'aws.greengrass#ListNamedShadowsForThing'
+          resources:
+            - gpoc
+      aws.greengrass.ipc.pubsub:
+        'com.example.HelloWorld:pubsub:1':
+          policyDescription: 'Allows access to shadow pubsub topics'
+          operations:
+            - 'aws.greengrass#SubscribeToTopic'
+          resources:
+            - $aws/things/gpoc/shadow/get/accepted
+            - $aws/things/gpoc/shadow/name/ACStatus/get/accepted
+      aws.greengrass.ipc.mqttproxy:
+        com.example.mqtt:mqttproxy:1:
+          policyDescription: Allows access to pub/sub to ac1/status
+          operations:
+          - aws.greengrass#PublishToIoTCore
+          - aws.greengrass#SubscribeToIOTCore
+          resources:
+          - ac1/status
+        com.example.mqtt:pubsub:2:
+          policyDescription: Allows access to subscribe to my/topic.
+          operations:
+          - aws.greengrass#SubscribeToIoTCore
+          resources:
+          - updatetopic
+ComponentDependencies:
+  aws.greengrass.TokenExchangeService:
+    VersionRequirement: ">=2.0.0 <3.0.0"
+    DependencyType: HARD
+Manifests:
+- Name: Linux
+  Platform:
+    os: linux
+  Lifecycle:
+    Install:
+      script: python3 -m pip install --user paho-mqtt boto3 pymongo awsiotsdk tinydb
+    Run: |
+      python3 -u {artifacts:decompressedPath}/helloWorld/artifacts/hello_world.py
+  Artifacts:
+  - URI: s3://greengrass-poc-buck/com.example.HelloWorld/1.3.0/helloWorld.zip
+    Unarchive: ZIP
