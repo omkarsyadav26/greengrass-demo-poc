@@ -1,0 +1,205 @@
+AWSTemplateFormatVersion: 2010-09-09
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  greengrass poc template
+
+
+Globals:
+  Function:
+    Runtime: !Ref PythonRuntime
+    MemorySize: 256
+    Timeout: 15
+    CodeUri:
+      Bucket: !Ref LambdaCodeS3Bucket
+      Key: !Ref LambdaCodeS3Key
+
+Parameters:
+  LambdaCodeS3Bucket:
+    Description: The S3 Bucket of lambda code
+    Type: String
+  LambdaCodeS3Key:
+    Description: The S3 Key of lambda code
+    Type: String
+  PocStageName:
+    Description: stage name
+    Type: String
+  PythonRuntime:
+    Description: Python runtime
+    Type: String
+    Default: python3.8
+
+Resources:
+  greenApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: green-poc-api
+      StageName: !Ref PocStageName
+      Cors:
+        AllowMethods: "'*'"
+        AllowHeaders: "'*'"
+        AllowOrigin: "'*'"
+
+  CoreDeviceGetFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub listGetFunction-${PocStageName}
+      Handler: core_device_list.get
+      Policies:
+        - AmazonS3FullAccess
+        - AWSIoTFullAccess
+        - AWSGreengrassFullAccess
+      Events:
+        GetEvents:
+          Type: Api
+          Properties:
+            Path: /core_devices/list
+            RestApiId: !Ref greenApi
+            Method: get
+  
+  ThingGetFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub listthingGetFunction-${PocStageName}
+      Handler: thing_list.get
+      Policies:
+        - AmazonS3FullAccess
+        - AWSIoTFullAccess
+        - AWSGreengrassFullAccess
+      Events:
+        GetEvents:
+          Type: Api
+          Properties:
+            Path: /things/list
+            RestApiId: !Ref greenApi
+            Method: get
+
+  CoreDetailsGetFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub CoreDetailsGetFunction-${PocStageName}
+      Handler: core_device_details.get
+      Policies:
+        - AmazonS3FullAccess
+        - AWSIoTFullAccess
+        - AWSGreengrassFullAccess
+      Events:
+        GetEvents:
+          Type: Api
+          Properties:
+            Path: /core_devices/details
+            RestApiId: !Ref greenApi
+            Method: get
+  
+  DeviceStatusGetFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub DeviceStatusGetFunction-${PocStageName}
+      Handler: core_device_status.get
+      Policies:
+        - AmazonS3FullAccess
+        - AWSIoTFullAccess
+        - AWSGreengrassFullAccess
+      Events:
+        GetEvents:
+          Type: Api
+          Properties:
+            Path: /core_devices/status
+            RestApiId: !Ref greenApi
+            Method: get
+
+  ShadowGetFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ShadowGetFunction-${PocStageName}
+      Handler: shadow_doc.get
+      Policies:
+        - AWSIoTFullAccess
+      Events:
+        GetEvents:
+          Type: Api
+          Properties:
+            Path: /shadow
+            RestApiId: !Ref greenApi
+            Method: get
+
+        
+  AthenaQueryGetFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub queryGetFunction-${PocStageName}
+      Handler: athena_query.get
+      Policies:
+        - AmazonS3FullAccess
+        - AWSIoTFullAccess
+        - AmazonAthenaFullAccess
+      Events:
+        GetEvents:
+          Type: Api
+          Properties:
+            Path: /query
+            RestApiId: !Ref greenApi
+            Method: get
+
+  InsCompPostFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub InstalledComponentPostFunction-${PocStageName}
+      Handler: installed_component.post
+      Policies:
+        - AmazonS3FullAccess
+        - AWSIoTFullAccess
+        - AWSGreengrassFullAccess
+      Events:
+        GetEvents:
+          Type: Api
+          Properties:
+            Path: /core_device/installed_component
+            RestApiId: !Ref greenApi
+            Method: post
+
+  ThresholdPostFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ThresholdPostFunction-${PocStageName}
+      Handler: threshold_update.post
+      Policies:
+        - AmazonS3FullAccess
+        - AWSIoTFullAccess
+        - AWSGreengrassFullAccess
+      Events:
+        GetEvents:
+          Type: Api
+          Properties:
+            Path: /threshold
+            RestApiId: !Ref greenApi
+            Method: post
+
+  overridePostFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub overrideFunction-${PocStageName}
+      Handler: manual_override.post
+      Policies:
+        - AmazonS3FullAccess
+        - AWSIoTFullAccess
+        - AWSGreengrassFullAccess
+      Events:
+        GetEvents:
+          Type: Api
+          Properties:
+            Path: /override
+            RestApiId: !Ref greenApi
+            Method: post
+            
+Outputs:
+  # Find out more about other implicit resources you can reference within SAM
+  # https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-specification-generated-resources.html
+  EventApi:
+    Description: "API Gateway endpoint for events-api"
+    Value: !Sub "https://${greenApi}.execute-api.${AWS::Region}.amazonaws.com/"
+  CoreDeviceGetFunction:
+    Description: "core device Lambda function ARN"
+    Value: !GetAtt CoreDeviceGetFunction.Arn
+  # EventFunctionIamRole:
+  #   Description: "Implicit IAM Role created for events function"
+  #   Value: !GetAtt EventSearchFunction.Arn
